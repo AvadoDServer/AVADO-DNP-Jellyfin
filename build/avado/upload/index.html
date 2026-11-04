@@ -312,6 +312,8 @@ function uploadAll(fileList) {
     var all = good === files.length;
     say($("upload-msg"), all
       ? "Done. Jellyfin is adding " + (good === 1 ? "the file" : "the " + good + " files") + " to your library now; it can take a few minutes before covers and titles appear."
+      : full && good === 0
+      ? "Nothing was added. Your AVADO is nearly full: it keeps the space that is left for the Ethereum node."
       : full
       ? good + " of " + files.length + " files were added. Your AVADO is nearly full: it keeps the space that is left for the Ethereum node, so the rest were not added."
       : good + " of " + files.length + " files were added. Choose the others again to retry.", all ? "ok" : "bad");

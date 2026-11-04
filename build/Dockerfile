@@ -13,6 +13,11 @@ RUN mkdir -p /etc/avado/certs \
 COPY avado/ /etc/avado/
 RUN chmod +x /etc/avado/*.sh
 
+# A link to "Add films and music" in Jellyfin's own menu.
+RUN sed -i 's|"menuLinks": \[\]|"menuLinks": [{ "name": "Add films and music", "icon": "file_upload", "url": "/avado-upload/" }]|' \
+      /jellyfin/jellyfin-web/config.json \
+ && grep -q '"Add films and music"' /jellyfin/jellyfin-web/config.json
+
 # The address Jellyfin gives its apps when they find it.
 ENV JELLYFIN_PublishedServerUrl=https://jellyfin.my.ava.do
 
