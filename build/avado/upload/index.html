@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Add films and music</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --fg: #1d2330; --muted: #5d6677; --border: #dde1e8;
+    --accent: #6c4cd8; --accent-fg: #ffffff; --ok: #1f8a4c; --bad: #b42318; --bar: #e8e4fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c; --card: #1b2029; --fg: #e8ebf1; --muted: #9aa3b5; --border: #2c3340;
+      --accent: #9b83ff; --accent-fg: #12151c; --ok: #4cc584; --bad: #ff7b6b; --bar: #2c2650;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+          padding: 20px; margin-top: 20px; }
+  label { display: block; font-weight: 600; margin: 12px 0 6px; }
+  input[type=text], input[type=password], select {
+    width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--fg); font: inherit; }
+  button, .button { display: inline-block; border: 0; border-radius: 10px; padding: 11px 18px;
+    background: var(--accent); color: var(--accent-fg); font: inherit; font-weight: 600;
+    cursor: pointer; text-decoration: none; }
+  button.secondary, .button.secondary { background: transparent; color: var(--accent);
+    border: 1px solid var(--border); }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  .kind { border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer;
+          background: var(--bg); text-align: left; color: var(--fg); font-weight: 500; }
+  .kind small { display: block; color: var(--muted); font-weight: 400; }
+  .kind[aria-pressed=true] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .msg { margin-top: 14px; }
+  .msg.bad { color: var(--bad); }
+  .msg.ok { color: var(--ok); }
+  ul.files { list-style: none; padding: 0; margin: 14px 0 0; }
+  ul.files li { padding: 8px 0; border-top: 1px solid var(--border); }
+  ul.files li:first-child { border-top: 0; }
+  .name { overflow-wrap: anywhere; }
+  .bar { height: 6px; background: var(--bar); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--accent); }
+  .state { font-size: 14px; color: var(--muted); }
+  .state.ok { color: var(--ok); } .state.bad { color: var(--bad); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Add films and music</h1>
+  <p class="muted">Copy films, series, music and home videos from this computer into Jellyfin on your AVADO.</p>
+
+  <section class="card" id="signin" hidden>
+    <p><strong>Sign in with your Jellyfin administrator account</strong> (the user name and password you
+      made when you first opened Jellyfin).</p>
+    <form id="signin-form">
+      <label for="user">User name</label>
+      <input id="user" type="text" autocomplete="username" required>
+      <label for="pw">Password</label>
+      <input id="pw" type="password" autocomplete="current-password">
+      <div class="row"><button type="submit">Sign in</button>
+        <a class="button secondary" href="/">Open Jellyfin</a></div>
+      <p class="msg bad" id="signin-msg" hidden></p>
+    </form>
+  </section>
+
+  <section class="card" id="setup" hidden>
+    <p><strong>Jellyfin is not set up yet.</strong> Open Jellyfin, choose your language and make your user
+      name and password. You can skip "Add media library": this page makes the libraries for you.</p>
+    <div class="row"><a class="button" href="/">Open Jellyfin</a></div>
+  </section>
+
+  <section class="card" id="upload" hidden>
+    <p class="muted" id="who"></p>
+    <label>What are you adding?</label>
+    <div class="kinds" role="group" aria-label="What are you adding?">
+      <button type="button" class="kind" data-kind="Films" aria-pressed="true">Films<small>One file per film</small></button>
+      <button type="button" class="kind" data-kind="Series" aria-pressed="false">Series<small>Choose the series' folder</small></button>
+      <button type="button" class="kind" data-kind="Music" aria-pressed="false">Music<small>Songs or album folders</small></button>
+      <button type="button" class="kind" data-kind="Photos" aria-pressed="false">Home videos and photos</button>
+    </div>
+    <div class="row">
+      <button type="button" id="pick-files">Choose files</button>
+      <button type="button" class="secondary" id="pick-folder">Choose a folder</button>
+    </div>
+    <input type="file" id="files" multiple hidden>
+    <input type="file" id="folder" webkitdirectory multiple hidden>
+    <p class="msg" id="upload-msg" hidden></p>
+    <ul class="files" id="list"></ul>
+    <div class="row" id="done-row" hidden><a class="button" href="/">Open Jellyfin</a></div>
+  </section>
+</main>
+<script>
+"use strict";
+// Jellyfin's own web page keeps its sign-in in this browser's storage; when
+// the owner already signed in there, this page uses that sign-in.
+var KINDS = {
+  Films:  { library: "Films",  type: "movies" },
+  Series: { library: "Series", type: "tvshows" },
+  Music:  { library: "Music",  type: "music" },
+  Photos: { library: "Home videos and photos", type: "homevideos" }
+};
+var token = null, kind = "Films", busy = false;
+
+function $(id) { return document.getElementById(id); }
+function show(id) { ["signin", "setup", "upload"].forEach(function (s) { $(s).hidden = s !== id; }); }
+function say(el, text, cls) { el.textContent = text; el.className = "msg" + (cls ? " " + cls : ""); el.hidden = !text; }
+function deviceId() {
+  var id = null;
+  try { id = localStorage.getItem("avado-upload-device"); } catch (e) {}
+  if (!id) {
+    id = "avado-upload-" + Math.random().toString(36).slice(2);
+    try { localStorage.setItem("avado-upload-device", id); } catch (e) {}
+  }
+  return id;
+}
+function authHeader() {
+  var h = 'MediaBrowser Client="AVADO upload", Device="Browser", DeviceId="' + deviceId() + '", Version="1.0"';
+  return token ? h + ', Token="' + token + '"' : h;
+}
+function api(method, path, body) {
+  var opts = { method: method, headers: { "Authorization": authHeader() } };
+  if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  return fetch(path, opts);
+}
+function savedTokens() {
+  var out = [];
+  try {
+    var t = sessionStorage.getItem("avado-upload-token");
+    if (t) out.push(t);
+    var c = JSON.parse(localStorage.getItem("jellyfin_credentials") || "{}");
+    (c.Servers || []).forEach(function (s) { if (s.AccessToken) out.push(s.AccessToken); });
+  } catch (e) {}
+  return out;
+}
+function tryTokens(list) {
+  if (!list.length) return Promise.resolve(null);
+  token = list[0];
+  return api("GET", "/Users/Me").then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
+    .then(function (me) { return me ? me : (token = null, tryTokens(list.slice(1))); });
+}
+function signedIn(me) {
+  if (!me.Policy || !me.Policy.IsAdministrator) {
+    token = null;
+    show("signin");
+    say($("signin-msg"), me.Name + " is not a Jellyfin administrator. Sign in with the account you made when you first opened Jellyfin.", "bad");
+    return;
+  }
+  try { sessionStorage.setItem("avado-upload-token", token); } catch (e) {}
+  $("who").textContent = "Signed in to Jellyfin as " + me.Name + ".";
+  show("upload");
+}
+function start() {
+  fetch("/System/Info/Public").then(function (r) { return r.json(); }).then(function (info) {
+    if (!info.StartupWizardCompleted) { show("setup"); return; }
+    return tryTokens(savedTokens()).then(function (me) { if (me) signedIn(me); else show("signin"); });
+  }).catch(function () {
+    show("setup");
+    $("setup").querySelector("p").textContent = "Jellyfin is still starting. Wait a minute and reload this page.";
+  });
+}
+
+$("signin-form").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  token = null;
+  say($("signin-msg"), "");
+  api("POST", "/Users/AuthenticateByName", { Username: $("user").value, Pw: $("pw").value })
+    .then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); })
+    .then(function (res) { token = res.AccessToken; signedIn(res.User); })
+    .catch(function () { say($("signin-msg"), "That user name and password did not work. Try again.", "bad"); });
+});
+
+Array.prototype.forEach.call(document.querySelectorAll(".kind"), function (b) {
+  b.addEventListener("click", function () {
+    kind = b.getAttribute("data-kind");
+    Array.prototype.forEach.call(document.querySelectorAll(".kind"), function (o) {
+      o.setAttribute("aria-pressed", o === b ? "true" : "false");
+    });
+  });
+});
+$("pick-files").addEventListener("click", function () { if (!busy) $("files").click(); });
+$("pick-folder").addEventListener("click", function () { if (!busy) $("folder").click(); });
+$("files").addEventListener("change", function () { uploadAll(this.files); this.value = ""; });
+$("folder").addEventListener("change", function () { uploadAll(this.files); this.value = ""; });
+
+// Makes the Jellyfin library for this kind the first time, so the owner
+// never has to type a folder name.
+function ensureLibrary(k) {
+  var want = "/media/" + k;
+  return api("GET", "/Library/VirtualFolders").then(function (r) {
+    if (!r.ok) throw new Error("libraries " + r.status);
+    return r.json();
+  }).then(function (libs) {
+    var has = libs.some(function (l) {
+      return (l.Locations || []).some(function (p) { return p.replace(/\/+$/, "") === want || p === "/media"; });
+    });
+    if (has) return;
+    var q = "?name=" + encodeURIComponent(KINDS[k].library) + "&collectionType=" + KINDS[k].type + "&refreshLibrary=false";
+    return api("POST", "/Library/VirtualFolders" + q, { LibraryOptions: { PathInfos: [{ Path: want }] } })
+      .then(function (r) { if (!r.ok) throw new Error("new library " + r.status); });
+  });
+}
+
+function sizeText(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + " GB";
+  if (n >= 1e6) return Math.round(n / 1e6) + " MB";
+  return Math.max(1, Math.round(n / 1e3)) + " kB";
+}
+
+function putFile(f, k, li) {
+  return new Promise(function (resolve) {
+    var rel = (f.webkitRelativePath || f.name).split("/").filter(function (p) { return p && p !== "." && p !== ".."; });
+    var url = "/avado-upload/put/" + k + "/" + rel.map(encodeURIComponent).join("/");
+    var xhr = new XMLHttpRequest();
+    var bar = li.querySelector(".bar > span"), state = li.querySelector(".state");
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Authorization", authHeader());
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) {
+        bar.style.width = (100 * e.loaded / e.total).toFixed(1) + "%";
+        state.textContent = sizeText(e.loaded) + " of " + sizeText(e.total);
+      }
+    };
+    xhr.onload = function () {
+      var ok = xhr.status >= 200 && xhr.status < 300;
+      bar.style.width = ok ? "100%" : bar.style.width;
+      state.textContent = ok ? "Added" : (xhr.status === 401 || xhr.status === 403
+        ? "Not allowed: sign in again as the Jellyfin administrator" : "Did not work (error " + xhr.status + ")");
+      state.className = "state " + (ok ? "ok" : "bad");
+      resolve(ok);
+    };
+    xhr.onerror = function () {
+      state.textContent = "The connection to your AVADO was lost";
+      state.className = "state bad";
+      resolve(false);
+    };
+    xhr.send(f);
+  });
+}
+
+function uploadAll(fileList) {
+  var files = Array.prototype.filter.call(fileList, function (f) { return f.name.charAt(0) !== "."; });
+  if (!files.length || busy) return;
+  busy = true;
+  $("pick-files").disabled = $("pick-folder").disabled = true;
+  $("done-row").hidden = true;
+  var k = kind, list = $("list"), items = [];
+  list.innerHTML = "";
+  files.forEach(function (f) {
+    var li = document.createElement("li");
+    li.innerHTML = '<div class="name"></div><div class="bar"><span></span></div><div class="state">Waiting</div>';
+    li.querySelector(".name").textContent = (f.webkitRelativePath || f.name) + " (" + sizeText(f.size) + ")";
+    list.appendChild(li);
+    items.push(li);
+  });
+  say($("upload-msg"), "Keep this page open until every file says Added.");
+  var good = 0;
+  ensureLibrary(k).then(function () {
+    return files.reduce(function (p, f, i) {
+      return p.then(function () { return putFile(f, k, items[i]).then(function (ok) { if (ok) good++; }); });
+    }, Promise.resolve());
+  }).then(function () {
+    return api("POST", "/Library/Refresh").catch(function () {});
+  }).then(function () {
+    var all = good === files.length;
+    say($("upload-msg"), all
+      ? "Done. Jellyfin is adding " + (good === 1 ? "the file" : "the " + good + " files") + " to your library now; it can take a few minutes before covers and titles appear."
+      : good + " of " + files.length + " files were added. Choose the others again to retry.", all ? "ok" : "bad");
+    $("done-row").hidden = false;
+  }).catch(function (e) {
+    say($("upload-msg"), "Jellyfin did not accept the request (" + e.message + "). Sign in again and retry.", "bad");
+    token = null;
+    try { sessionStorage.removeItem("avado-upload-token"); } catch (x) {}
+  }).then(function () {
+    busy = false;
+    $("pick-files").disabled = $("pick-folder").disabled = false;
+  });
+}
+
+start();
+</script>
+</body>
+</html>

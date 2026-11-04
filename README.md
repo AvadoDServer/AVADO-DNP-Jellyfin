@@ -13,16 +13,35 @@ films, series, music and photos, packaged for AVADO.
 | `build/Dockerfile` | Official image + `nginx-light`. Jellyfin listens on 8096 inside the container; nginx serves 80 and 443. No host ports. `JELLYFIN_PublishedServerUrl=https://jellyfin.my.ava.do` is the address Jellyfin gives its apps. |
 | `build/avado/avado-start.sh` | Start wrapper shared by the AVADO app packages: nginx, the certificate check (15 s after start, then daily), `nice 10` for Jellyfin (and so for the ffmpeg processes it starts). |
 | `build/avado/avado-certs.sh` | The `*.my.ava.do` certificate: the box's DAPPMANAGER copy (`http://dappmanager.my.ava.do/my.ava.do.crt`, as AVADO-DNP-Nethermind uses), else `http://iso.ava.do`, else the copy taken at build time. |
-| `build/avado/nginx.conf.in` | nginx: no buffering (streaming), websockets. |
+| `build/avado/nginx.conf.in` | nginx: no buffering (streaming), websockets, the upload page. |
+| `build/avado/app-prestart.sh` | Creates the upload folders in the media volume. |
 
 Volumes: `config` (settings, users, database), `cache` (transcoding scratch, images), `media`
-(the films and music; the library folder to choose in Jellyfin's first-run wizard is `/media`).
+(the films and music, in `Films`, `Series`, `Music` and `Photos`).
 
-## Getting films and music onto the box
+## Getting films and music onto the box: "Add films and music"
 
-Jellyfin has no upload button. Today the owner copies files into the `media` volume with the
-Admin's Files tab of this package (upload to `/media`). That works but is not a one-click flow; a
-simpler way (an upload page, or a shared network folder) is an open question for the owner.
+Jellyfin has no upload button, and the Admin's Files tab cannot carry films (it sends a file
+through the Admin's websocket in one piece). So the package has its own small page at
+**https://jellyfin.my.ava.do/avado-upload/** (`build/avado/upload/index.html`, served by the nginx
+in the container; also in the store links):
+
+1. It uses the owner's Jellyfin sign-in from Jellyfin's own page in the same browser, or asks for
+   the Jellyfin user name and password. Only a Jellyfin **administrator** may upload.
+2. The owner picks a kind (Films, Series, Music, Home videos and photos) and files or a folder
+   (folder uploads keep their sub-folders, which Jellyfin needs for series and albums).
+3. The first upload of a kind makes the Jellyfin library for it (`/media/Films`, `/media/Series`,
+   `/media/Music`, `/media/Photos`) unless a library already covers that folder or all of `/media`.
+4. Each file is sent with one HTTP `PUT` straight into the media volume (nginx WebDAV `PUT` only;
+   no size limit; the temporary file is in the same volume so nothing is copied twice), with a
+   progress bar. Afterwards the page asks Jellyfin to scan the libraries.
+
+Safety: nginx asks Jellyfin before accepting a file (`auth_request` to `/Library/VirtualFolders`,
+which answers only administrators: no sign-in 401, a normal user 403). Only `PUT` into those four
+folders is possible: nothing can be read, listed or deleted through it, and paths outside them are
+refused (tested: `..`, encoded `..`, other folders). A file with the same name is replaced.
+`build/avado/app-prestart.sh` creates the folders and gives them to the nginx user; Jellyfin
+reads them. Temporary files of cut-off uploads are removed after a day.
 
 ## Resource use and the Ethereum node
 
