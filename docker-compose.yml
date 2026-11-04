@@ -1,0 +1,16 @@
+version: '3.4'
+services:
+  jellyfin.avado.dnp.dappnode.eth:
+    image: 'jellyfin.avado.dnp.dappnode.eth:0.1.0'
+    build:
+      context: ./build
+    volumes:
+      - 'config:/config'
+      - 'cache:/cache'
+      - 'media:/media'
+      - '/etc/localtime:/etc/localtime:ro'
+    restart: always
+volumes:
+  config: {}
+  cache: {}
+  media: {}

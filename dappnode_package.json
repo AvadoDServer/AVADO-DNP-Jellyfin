@@ -1,0 +1,34 @@
+{
+  "name": "jellyfin.avado.dnp.dappnode.eth",
+  "version": "0.1.0",
+  "upstream": "12.4",
+  "title": "Jellyfin (films and music)",
+  "shortDescription": "Your own streaming service for your films, series and music",
+  "description": "Your own streaming service: Jellyfin plays the films, series, music and photos you keep on your AVADO, on your TV, phone, tablet or computer, with no subscription and no tracking. Getting started: open Jellyfin, pick your language, create your user name and password, and add a library that points to the folder /media. Then install the free Jellyfin app on your TV or phone and use the server address https://jellyfin.my.ava.do. Any device that can open my.ava.do (at home on the AVADO network, or away through Remote Access) can watch. Converting videos for a phone uses a lot of processor time; your AVADO gives the Ethereum node priority, so playback may pause briefly while the node is busy.",
+  "type": "service",
+  "autoupdate": true,
+  "image": {
+    "volumes": [
+      "config:/config",
+      "cache:/cache",
+      "media:/media",
+      "/etc/localtime:/etc/localtime:ro"
+    ],
+    "ports": [],
+    "restart": "always"
+  },
+  "author": "AVADO",
+  "license": "GPL-3.0",
+  "dependencies": {},
+  "links": {
+    "Open Jellyfin": "https://jellyfin.my.ava.do",
+    "Jellyfin apps": "https://jellyfin.org/downloads/clients/",
+    "Jellyfin project": "https://jellyfin.org"
+  },
+  "ui": {
+    "OnboardingWizard": {
+      "url": "https://jellyfin.my.ava.do",
+      "external": true
+    }
+  }
+}
