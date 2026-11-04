@@ -35,6 +35,11 @@ in the container; also in the store links):
 4. Each file is sent with one HTTP `PUT` straight into the media volume (nginx WebDAV `PUT` only;
    no size limit; the temporary file is in the same volume so nothing is copied twice), with a
    progress bar. Afterwards the page asks Jellyfin to scan the libraries.
+5. Before each file the page asks Jellyfin how much disk space is left (`/System/Info/Storage`,
+   administrators only) and refuses the file if less than 15% of the disk, or 100 GB, whichever is
+   more, would stay free: the media volume shares the disk with the Ethereum node, which keeps
+   growing. This is a check in the page, not in nginx, so it protects owners from filling the disk
+   by mistake; it is not a security limit.
 
 Safety: nginx asks Jellyfin before accepting a file (`auth_request` to `/Library/VirtualFolders`,
 which answers only administrators: no sign-in 401, a normal user 403). Only `PUT` into those four

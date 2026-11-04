@@ -217,7 +217,33 @@ function sizeText(n) {
   return Math.max(1, Math.round(n / 1e3)) + " kB";
 }
 
+// The films share the disk with the Ethereum node, which keeps growing.
+// Before each file, ask Jellyfin how much space is left (administrators
+// only) and keep at least 15% of the disk, and never less than 100 GB, free
+// for the node. If Jellyfin cannot tell, the upload goes ahead.
+var RESERVE_SHARE = 0.15, RESERVE_MIN = 100e9;
+function roomFor(size) {
+  return api("GET", "/System/Info/Storage").then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; })
+    .then(function (s) {
+      var d = s && s.ProgramDataFolder;
+      if (!d || !(d.FreeSpace >= 0) || !(d.UsedSpace >= 0)) return true;
+      var reserve = Math.max(RESERVE_MIN, RESERVE_SHARE * (d.FreeSpace + d.UsedSpace));
+      return d.FreeSpace - size >= reserve;
+    });
+}
+
 function putFile(f, k, li) {
+  return roomFor(f.size).then(function (ok) {
+    if (ok) return sendFile(f, k, li);
+    var state = li.querySelector(".state");
+    state.textContent = "Not added: your AVADO keeps the space that is left for the Ethereum node";
+    state.className = "state bad";
+    return "full";
+  });
+}
+
+function sendFile(f, k, li) {
   return new Promise(function (resolve) {
     var rel = (f.webkitRelativePath || f.name).split("/").filter(function (p) { return p && p !== "." && p !== ".."; });
     var url = "/avado-upload/put/" + k + "/" + rel.map(encodeURIComponent).join("/");
@@ -264,10 +290,21 @@ function uploadAll(fileList) {
     items.push(li);
   });
   say($("upload-msg"), "Keep this page open until every file says Added.");
-  var good = 0;
+  var good = 0, full = false;
   ensureLibrary(k).then(function () {
     return files.reduce(function (p, f, i) {
-      return p.then(function () { return putFile(f, k, items[i]).then(function (ok) { if (ok) good++; }); });
+      return p.then(function () {
+        if (full) {
+          var st = items[i].querySelector(".state");
+          st.textContent = "Not added: not enough space left";
+          st.className = "state bad";
+          return;
+        }
+        return putFile(f, k, items[i]).then(function (ok) {
+          if (ok === "full") full = true;
+          else if (ok) good++;
+        });
+      });
     }, Promise.resolve());
   }).then(function () {
     return api("POST", "/Library/Refresh").catch(function () {});
@@ -275,6 +312,8 @@ function uploadAll(fileList) {
     var all = good === files.length;
     say($("upload-msg"), all
       ? "Done. Jellyfin is adding " + (good === 1 ? "the file" : "the " + good + " files") + " to your library now; it can take a few minutes before covers and titles appear."
+      : full
+      ? good + " of " + files.length + " files were added. Your AVADO is nearly full: it keeps the space that is left for the Ethereum node, so the other files were not added."
       : good + " of " + files.length + " files were added. Choose the others again to retry.", all ? "ok" : "bad");
     $("done-row").hidden = false;
   }).catch(function (e) {
