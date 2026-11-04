@@ -29,7 +29,8 @@ in the container; also in the store links and as "Add films and music" in Jellyf
 1. It uses the owner's Jellyfin sign-in from Jellyfin's own page in the same browser, or asks for
    the Jellyfin user name and password. Only a Jellyfin **administrator** may upload.
 2. The owner picks a kind (Films, Series, Music, Home videos and photos) and files or a folder
-   (folder uploads keep their sub-folders, which Jellyfin needs for series and albums).
+   (folder uploads keep their sub-folders, which Jellyfin needs for series and albums). Phones and
+   tablets cannot pick a folder, so there the page offers files only (no "Choose a folder").
 3. The libraries exist from the first start. If the owner removed one, the next upload of that kind
    makes it again (`/media/Films`, `/media/Series`, `/media/Music`, `/media/Photos`) unless a library
    already covers that folder or all of `/media`.
@@ -47,7 +48,10 @@ which answers only administrators: no sign-in 401, a normal user 403). Only `PUT
 folders is possible: nothing can be read, listed or deleted through it, and paths outside them are
 refused (tested: `..`, encoded `..`, other folders). A file with the same name is replaced.
 `build/avado/app-prestart.sh` creates the folders and gives them to the nginx user; Jellyfin
-reads them. Temporary files of cut-off uploads are removed after a day.
+reads them. Temporary files of cut-off uploads are removed after a day. The page is served over
+https only: `http://jellyfin.my.ava.do/avado-upload/...` redirects to https (the sign-in and the
+files must not go over plain http). The rest of Jellyfin still answers on http as well, for TV
+apps set up with an http address.
 
 ## Resource use and the Ethereum node
 

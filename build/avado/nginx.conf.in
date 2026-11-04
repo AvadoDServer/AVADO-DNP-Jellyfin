@@ -23,6 +23,13 @@ http {
     ''      close;
   }
 
+  # The upload page carries the Jellyfin sign-in and the files: https only.
+  # (The rest of Jellyfin stays on http too, for TV apps set up that way.)
+  map "$scheme:$uri" $avado_upload_insecure {
+    default 0;
+    "~^http:/avado-upload" 1;
+  }
+
   ssl_certificate     /etc/avado/certs/live.crt;
   ssl_certificate_key /etc/avado/certs/live.key;
   ssl_protocols       TLSv1.2 TLSv1.3;
@@ -33,6 +40,10 @@ http {
     listen 443 ssl default_server;
     client_max_body_size 200m;
     absolute_redirect off;
+
+    if ($avado_upload_insecure) {
+      return 301 https://$host$request_uri;
+    }
 
     # While the app starts or restarts: a plain-language page that reloads
     # itself, instead of nginx's "502 Bad Gateway".

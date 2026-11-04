@@ -39,6 +39,14 @@
   .kind { border: 1px solid var(--border); border-radius: 12px; padding: 12px; cursor: pointer;
           background: var(--bg); text-align: left; color: var(--fg); font-weight: 500; }
   .kind small { display: block; color: var(--muted); font-weight: 400; }
+  /* Phones and tablets cannot pick a whole folder: no "Choose a folder" there. */
+  .kind small.touch { display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .kind small.desk, #pick-folder { display: none; }
+    .kind small.touch { display: block; }
+  }
+  .no-folder .kind small.desk, .no-folder #pick-folder { display: none; }
+  .no-folder .kind small.touch { display: block; }
   .kind[aria-pressed=true] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
   .msg { margin-top: 14px; }
   .msg.bad { color: var(--bad); }
@@ -84,8 +92,8 @@
     <label>What are you adding?</label>
     <div class="kinds" role="group" aria-label="What are you adding?">
       <button type="button" class="kind" data-kind="Films" aria-pressed="true">Films<small>One file per film</small></button>
-      <button type="button" class="kind" data-kind="Series" aria-pressed="false">Series<small>Choose the series' folder</small></button>
-      <button type="button" class="kind" data-kind="Music" aria-pressed="false">Music<small>Songs or album folders</small></button>
+      <button type="button" class="kind" data-kind="Series" aria-pressed="false">Series<small class="desk">Choose the series' folder</small><small class="touch">Episode files</small></button>
+      <button type="button" class="kind" data-kind="Music" aria-pressed="false">Music<small class="desk">Songs or album folders</small><small class="touch">Songs</small></button>
       <button type="button" class="kind" data-kind="Photos" aria-pressed="false">Home videos and photos</button>
     </div>
     <div class="row">
@@ -101,6 +109,8 @@
 </main>
 <script>
 "use strict";
+// A browser that cannot pick folders at all gets no "Choose a folder".
+if (!("webkitdirectory" in document.createElement("input"))) document.documentElement.classList.add("no-folder");
 // Jellyfin's own web page keeps its sign-in in this browser's storage; when
 // the owner already signed in there, this page uses that sign-in.
 var KINDS = {
